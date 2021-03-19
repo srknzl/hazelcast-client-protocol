@@ -118,7 +118,7 @@ const EVENT_{{ to_upper_snake_case(event.name)}}_{{to_upper_snake_case(param.nam
 /** @internal */
 export interface {{ service_name|capital }}{{ method.name|capital }}ResponseParams {
 {% for param in method.response.params %}
-    {{ escape_keyword(param.name) }}: {{ lang_types_encode(param.type) }};
+    {{ escape_keyword(param.name) }}: {{ lang_types_encode(param.type) }}{% if param.nullable %} | null{% endif %};
 {% endfor %}
 {% for new_param in response_new_params %}
     is{{ new_param.name|capital }}Exists: boolean;
@@ -129,7 +129,7 @@ export interface {{ service_name|capital }}{{ method.name|capital }}ResponsePara
 /** @internal */
 export class {{ service_name|capital }}{{ method.name|capital }}Codec {
 {#REQUEST_ENCODE#}
-    static encodeRequest({% for param in method.request.params %}{{ escape_keyword(param.name) }}: {{ lang_types_encode(param.type) }}{% if not loop.last %}, {% endif %}{% endfor %}): ClientMessage {
+    static encodeRequest({% for param in method.request.params %}{{ escape_keyword(param.name) }}: {{ lang_types_encode(param.type) }}{% if param.nullable %} | null{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}): ClientMessage {
         const clientMessage = ClientMessage.createForEncode();
         clientMessage.setRetryable({{ method.request.retryable|lower }});
 
@@ -151,7 +151,7 @@ export class {{ service_name|capital }}{{ method.name|capital }}Codec {
 {% elif singleResponseValue %}
     {% set param = method.response.params|last %}
 
-    static decodeResponse(clientMessage: ClientMessage): {{ lang_types_decode(param.type) }} {
+    static decodeResponse(clientMessage: ClientMessage): {{ lang_types_decode(param.type) }}{% if param.nullable %} | null{% endif %} {
 {% if  response_fix_sized_params|length != 0 %}
         const initialFrame = clientMessage.nextFrame();
 {% else %}
@@ -208,7 +208,7 @@ export class {{ service_name|capital }}{{ method.name|capital }}Codec {
 {# EVENTS#}
 {% if method.events|length != 0 %}
 
-    static handle(clientMessage: ClientMessage{% for event in method.events %}, handle{{ event.name|capital }}Event: ({% for param in event.params %}{{ escape_keyword(param.name) }}: {{ lang_types_encode(param.type) }}{% if not loop.last %}, {% endif %}{% endfor %}) => void = null{% endfor %}): void {
+    static handle(clientMessage: ClientMessage{% for event in method.events %}, handle{{ event.name|capital }}Event: (({% for param in event.params %}{{ escape_keyword(param.name) }}: {{ lang_types_encode(param.type) }}{% if param.nullable %} | null{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}) => void) | null = null{% endfor %}): void {
         const messageType = clientMessage.getMessageType();
     {% for event in method.events %}
         if (messageType === EVENT_{{ to_upper_snake_case(event.name) }}_MESSAGE_TYPE && handle{{ event.name|capital }}Event !== null) {
