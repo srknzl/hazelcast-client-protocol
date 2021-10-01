@@ -4,7 +4,7 @@ import re
 
 def py_types_encode_decode(t):
     if t not in _py_types:
-        raise NotImplementedError("Missing type Mapping")
+        raise NotImplementedError("Missing type Mapping for %s" % t)
 
 
 _pattern1 = re.compile("(.)([A-Z][a-z]+)")
@@ -23,11 +23,19 @@ def py_get_import_path_holders(param_type):
     return import_paths.get(param_type, [])
 
 
+_private_custom_types = ("SqlError", "SqlQueryId")
+
+
+def py_custom_type_name(name):
+    if name in _private_custom_types:
+        return "_" + name
+    return name
+
+
 py_ignore_service_list = {
     "Cache",
     "CardinalityEstimator",
     "Client.addPartitionLostListener",
-    "Client.authenticationCustom",
     "Client.createProxies",
     "Client.removeMigrationListener",
     "Client.removePartitionLostListener",
@@ -39,14 +47,9 @@ py_ignore_service_list = {
     "ExecutorService.cancelOnMember",
     "ExecutorService.cancelOnPartition",
     "Map.addPartitionLostListener",
-    "Map.aggregate",
-    "Map.aggregateWithPredicate",
     "Map.eventJournalRead",
     "Map.eventJournalSubscribe",
-    "Map.project",
-    "Map.projectWithPredicate",
     "Map.removeAll",
-    "Map.removeInterceptor",
     "Map.removePartitionLostListener",
     "Map.submitToKey",
     "MultiMap.delete",
@@ -54,10 +57,13 @@ py_ignore_service_list = {
     "Queue.drainTo",
     "ReplicatedMap.addNearCacheEntryListener",
     "ScheduledExecutor",
-    "Sql",
+    "Sql.execute_reserved",
+    "Sql.fetch_reserved",
+    "Sql.mappingDdl",
     "Topic.publishAll",
     "TransactionalMap.containsValue",
     "XATransaction",
+    "Jet",
 }
 
 
@@ -96,6 +102,7 @@ class PathHolders:
     ListUUIDCodec = ImportPathHolder("ListUUIDCodec", "protocol.builtin")
     ListDataCodec = ImportPathHolder("ListDataCodec", "protocol.builtin")
     ListMultiFrameCodec = ImportPathHolder("ListMultiFrameCodec", "protocol.builtin")
+    ListCNDataCodec = ImportPathHolder("ListCNDataCodec", "protocol.builtin")
     EntryListCodec = ImportPathHolder("EntryListCodec", "protocol.builtin")
     EntryListLongByteArrayCodec = ImportPathHolder("EntryListLongByteArrayCodec", "protocol.builtin")
     EntryListIntegerUUIDCodec = ImportPathHolder("EntryListIntegerUUIDCodec", "protocol.builtin")
@@ -117,11 +124,18 @@ class PathHolders:
     AnchorDataListHolder = ImportPathHolder("AnchorDataListHolder", "protocol")
     AnchorDataListHolderCodec = ImportPathHolder("AnchorDataListHolderCodec",
                                                  "protocol.codec.custom.anchor_data_list_holder_codec")
-    EndpointQualifier = ImportPathHolder("EndpointQualifier", "protocol")
+    EndpointQualifier = ImportPathHolder("EndpointQualifier", "core")
     EndpointQualifierCodec = ImportPathHolder("EndpointQualifierCodec",
                                               "protocol.codec.custom.endpoint_qualifier_codec")
     RaftGroupId = ImportPathHolder("RaftGroupId", "protocol")
     RaftGroupIdCodec = ImportPathHolder("RaftGroupIdCodec", "protocol.codec.custom.raft_group_id_codec")
+    SqlQueryId = ImportPathHolder("_SqlQueryId", "sql")
+    SqlQueryIdCodec = ImportPathHolder("SqlQueryIdCodec", "protocol.codec.custom.sql_query_id_codec")
+    SqlColumnMetadata = ImportPathHolder("SqlColumnMetadata", "sql")
+    SqlColumnMetadataCodec = ImportPathHolder("SqlColumnMetadataCodec", "protocol.codec.custom.sql_column_metadata_codec")
+    SqlError = ImportPathHolder("_SqlError", "sql")
+    SqlErrorCodec = ImportPathHolder("SqlErrorCodec", "protocol.codec.custom.sql_error_codec")
+    SqlPageCodec = ImportPathHolder("SqlPageCodec", "protocol.builtin")
 
 
 import_paths = {
@@ -147,6 +161,7 @@ import_paths = {
     "List_MemberInfo": [PathHolders.ListMultiFrameCodec, PathHolders.MemberInfoCodec],
     "List_DistributedObjectInfo": [PathHolders.ListMultiFrameCodec, PathHolders.DistributedObjectInfoCodec],
     "List_StackTraceElement": [PathHolders.ListMultiFrameCodec, PathHolders.StackTraceElementCodec],
+    "List_SqlColumnMetadata": [PathHolders.ListMultiFrameCodec, PathHolders.SqlColumnMetadataCodec],
     "EntryList_String_String": [PathHolders.EntryListCodec, PathHolders.StringCodec],
     "EntryList_String_byteArray": [PathHolders.EntryListCodec, PathHolders.StringCodec, PathHolders.ByteArrayCodec],
     "EntryList_Long_byteArray": [PathHolders.EntryListLongByteArrayCodec],
@@ -168,7 +183,11 @@ import_paths = {
     "PagingPredicateHolder": [PathHolders.PagingPredicateHolder, PathHolders.PagingPredicateHolderCodec],
     "EndpointQualifier": [PathHolders.EndpointQualifier, PathHolders.EndpointQualifierCodec],
     "Map_EndpointQualifier_Address": [PathHolders.MapCodec, PathHolders.EndpointQualifierCodec,
-                                      PathHolders.AddressCodec]
+                                      PathHolders.AddressCodec],
+    "SqlQueryId": [PathHolders.SqlQueryId, PathHolders.SqlQueryIdCodec],
+    "SqlColumnMetadata": [PathHolders.SqlColumnMetadata, PathHolders.SqlColumnMetadataCodec],
+    "SqlError": [PathHolders.SqlError, PathHolders.SqlErrorCodec],
+    "SqlPage": [PathHolders.SqlPageCodec],
 }
 
 _py_types = {
@@ -194,6 +213,10 @@ _py_types = {
     "RaftGroupId",
     "AnchorDataListHolder",
     "PagingPredicateHolder",
+    "SqlQueryId",
+    "SqlColumnMetadata",
+    "SqlError",
+    "SqlPage",
 
     "IndexConfig",
     "BitmapIndexOptions",
@@ -209,6 +232,7 @@ _py_types = {
     "List_String",
     "List_StackTraceElement",
     "ListCN_Data",
+    "List_SqlColumnMetadata",
 
     "EntryList_UUID_Long",
 
